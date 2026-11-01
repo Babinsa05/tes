@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>TXT Combiner Pro</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIlRYVCBDb21iaW5lciBQcm8iLAogICJzaG9ydF9uYW1lIjogIlRYVENvbWJpbmVyIiwKICAiZGVzY3JpcHRpb24iOiAiR2FidW5nIGZpbGUgVFhUIGRlc2EiLAogICJzdGFydF91cmwiOiAiLyIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiI2YwZjRmOCIsCiAgInRoZW1lX2NvbG9yIjogIiMxZTI5M2IiLAogICJpY29ucyI6IFsKICAgIHsKICAgICAgInNyYyI6ICJodHRwczovL2Nkbi5qcy5kZWxpdnIubmV0L2dwL2ZvbnQtYXdlc29tZS82LjAuMC9zdmdzL3NvbGlkL2ZvbGRlci1vcGVuLnN2ZyIsCiAgICAgICJzaXplcyI6ICIxOTJ4MTkyIiwKICAgICAgInR5cGUiOiAiaW1hZ2Uvc3ZnK3htbCIsCiAgICAgICJwdXJwb3NlIjogImFueSBtYXNrYWJsZSIKICAgIH0KICBdCn0=">
+    <link rel="icon" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.0.0/svgs/solid/folder-open.svg" type="image/svg+xml">
+</head>
+<body>
+<div class="container">
+    <h1>
+        <span>TXT Combiner <small>Desa</small></span>
+        <button class="install-btn" id="installBtn">Install App</button>
+    </h1>
+    <div class="subtitle">Gabung file TXT per Desa — pilih Bulan → Desa</div>
+
+    <div class="status-bar">
+        <div class="status-indicator">
+            <span class="dot idle" id="indicatorDot"></span>
+            <span id="statusText">Idle</span>
+        </div>
+        <span style="font-size:12px; color:#888;">
+            <span style="background:#222;color:#fff;padding:0 8px;border-radius:2px;">Drive</span>
+        </span>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="manual">Gabung Manual</button>
+        <button class="tab-btn" data-tab="desa">Gabung Desa</button>
+        <button class="tab-btn" data-tab="server">Server</button>
+    </div>
+
+    <!-- TAB 1: MANUAL -->
+    <div class="tab-pane active" id="tab-manual">
+        <p style="margin-bottom:8px;">Drag & drop file .txt atau .zip</p>
+        <div class="drop-zone" id="dropZone">
+            <div style="pointer-events:none;">
+                <span style="font-size:20px;">📂</span><br>
+                <span style="font-size:14px;">Tarik file ke sini</span>
+            </div>
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px;">
+            <button class="btn btn-primary" id="addFilesBtn">Tambah File</button>
+            <button class="btn btn-success" id="addFolderBtn">Tambah Folder</button>
+            <button class="btn btn-danger" id="clearFilesBtn">Hapus</button>
+            <button class="btn btn-warning" id="processManualBtn">Gabung & Download</button>
+        </div>
+        <div class="file-list" id="fileList">Belum ada file.</div>
+        <div class="stats">
+            <span id="statRaw">Baris: 0</span>
+            <span id="statDup">Duplikat: 0</span>
+            <span id="statUnique">Unik: 0</span>
+        </div>
+        <div class="output-area" id="manualOutput">Hasil gabungan akan muncul di sini.</div>
+    </div>
+
+    <!-- TAB 2: DESA -->
+    <div class="tab-pane" id="tab-desa">
+        <p style="margin-bottom:10px;">Pilih <strong>Bulan</strong> → <strong>Desa</strong></p>
+        <div class="filter-group">
+            <label>📆 Bulan</label>
+            <select id="monthSelect"><option value="">-- Pilih Bulan --</option></select>
+            <label>🏘️ Desa</label>
+            <select id="villageSelect" disabled><option value="">-- Pilih Desa --</option></select>
+            <button class="btn btn-teal" id="btnProcessDesa">Proses Desa</button>
+            <button class="btn btn-success-all" id="btnProcessAllDesa">Proses Semua Desa</button>
+            <span class="refresh-link" id="refreshFilterBtn">↻ Refresh</span>
+            <span class="loading-text" id="desaLoading"></span>
+        </div>
+        <div class="path-preview-container">
+            <span>📍 Path:</span>
+            <code id="pathPreview">(pilih bulan dan desa)</code>
+            <span id="folderStatus"></span>
+        </div>
+        <div class="output-area" id="desaOutput">Pilih Bulan → Desa, lalu klik "Proses".</div>
+    </div>
+
+    <!-- TAB 3: SERVER -->
+    <div class="tab-pane" id="tab-server">
+        <p style="margin-bottom:10px;">Aksi server</p>
+        <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px;">
+            <button class="btn btn-primary" id="btnProcess">Proses Semua</button>
+            <button class="btn btn-success" id="btnTrigger">Buat Trigger</button>
+            <button class="btn btn-danger" id="btnDeleteTriggers">Hapus Trigger</button>
+            <button class="btn btn-warning" id="btnTest">Test</button>
+            <button class="btn btn-purple" id="btnRestore">Restore ZIP</button>
+            <button class="btn btn-info" id="btnDeleteInfo">Hapus INFO</button>
+            <button class="btn btn-gray" id="btnClearServer">Bersihkan</button>
+        </div>
+        <div class="output-area" id="serverOutput">Klik tombol untuk menjalankan aksi.</div>
+    </div>
+
+    <div class="footer">
+        <span class="highlight">I Nyoman Arta</span> &middot; 2025
+    </div>
+</div>
+
+<script>
+// ============================================================
+// KONFIGURASI - GANTI DENGAN URL DEPLOY ANDA
+// ============================================================
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby5fZWz_KLFBsE_gf-9252Ser8tfonEuQ5Gs7IxiwwYd8K5mW-I8ykA_A0dKFR7rxFE/exec';
+const SECRET_TOKEN = '';
+
+// ============================================================
+// VARIABEL GLOBAL
+// ============================================================
+let selectedFiles = [];
+let isRunning = false;
+
+// ============================================================
+// DOM ELEMENTS
+// ============================================================
+const dot = document.getElementById('indicatorDot');
+const statusText = document.getElementById('statusText');
+const monthSelect = document.getElementById('monthSelect');
+const villageSelect = document.getElementById('villageSelect');
+
+// ============================================================
+// FUNGSI UTILITY
+// ============================================================
+function setStatus(state, text) { dot.className = 'dot ' + state; statusText.textContent = text; }
+function appendOutput(el, text) { el.textContent += text + '\n'; el.scrollTop = el.scrollHeight; }
+
+// ============================================================
+// TAB SWITCHING
+// ============================================================
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+        document.getElementById('tab-' + this.dataset.tab).classList.add('active');
+        if (this.dataset.tab === 'desa') loadMonths();
+    });
+});
+
+// ============================================================
+// LOAD BULAN & DESA
+// ============================================================
+async function loadMonths() {
+    const loading = document.getElementById('desaLoading');
+    loading.textContent = '⏳ Memuat bulan...';
+    monthSelect.disabled = true;
+    villageSelect.disabled = true;
+    try {
+        const data = await fetchAPI('getMonthsDirect');
+        if (data.success && data.data) {
+            monthSelect.innerHTML = '<option value="">-- Pilih Bulan --</option>';
+            data.data.forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item.name;
+                opt.textContent = item.name + (item.processed ? ' ✅' : '');
+                opt.className = item.processed ? 'processed' : 'unprocessed';
+                monthSelect.appendChild(opt);
+            });
+            loading.textContent = '✅ ' + data.data.length + ' bulan ditemukan';
+        } else { loading.textContent = '❌ ' + (data.message || 'Gagal'); }
+    } catch (e) { loading.textContent = '❌ Error: ' + e.message; }
+    monthSelect.disabled = false;
+}
+
+async function loadVillages(month) {
+    const loading = document.getElementById('desaLoading');
+    villageSelect.disabled = true;
+    if (!month) { villageSelect.innerHTML = '<option value="">-- Pilih Desa --</option>'; villageSelect.disabled = true; updatePath(); return; }
+    loading.textContent = '⏳ Memuat desa...';
+    try {
+        const data = await fetchAPI('getVillagesDirect', { month });
+        if (data.success && data.data) {
+            villageSelect.innerHTML = '<option value="">-- Pilih Desa --</option>';
+            data.data.forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item.path;
+                opt.textContent = item.name + (item.processed ? ' ✅' : '');
+                opt.className = item.processed ? 'processed' : 'unprocessed';
+                villageSelect.appendChild(opt);
+            });
+            villageSelect.disabled = false;
+            loading.textContent = '✅ ' + data.data.length + ' desa ditemukan';
+        } else { loading.textContent = '❌ ' + (data.message || 'Gagal'); }
+    } catch (e) { loading.textContent = '❌ Error: ' + e.message; }
+}
+
+function updatePath() {
+    const month = monthSelect.value;
+    const village = villageSelect.value;
+    const sel = villageSelect.options[villageSelect.selectedIndex];
+    document.getElementById('pathPreview').textContent = village ? month + '/' + village : (month || '(pilih)');
+    document.getElementById('folderStatus').innerHTML = village && sel && sel.value ?
+        '<span class="status-badge ' + (sel.className.includes('processed') ? 'processed' : 'unprocessed') + '">' +
+        (sel.className.includes('processed') ? '✅ Sudah Diproses' : '⏳ Belum Diproses') + '</span>' : '';
+}
+
+// ============================================================
+// API CALL
+// ============================================================
+async function fetchAPI(action, params = {}) {
+    let url = APPS_SCRIPT_URL + '?action=' + encodeURIComponent(action) + '&t=' + Date.now();
+    if (SECRET_TOKEN) url += '&token=' + encodeURIComponent(SECRET_TOKEN);
+    for (const [k, v] of Object.entries(params)) { if (v) url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(v); }
+    const res = await fetch(url, { method: 'GET', mode: 'cors', cache: 'no-cache' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+}
+
+// ============================================================
+// CALL SERVER ACTION
+// ============================================================
+async function callServerAction(action, btnId, extraParams = {}, outputEl = document.getElementById('serverOutput')) {
+    if (isRunning) { alert('Masih ada proses berjalan.'); return; }
+    const btn = document.getElementById(btnId);
+    if (btn) { btn.disabled = true; isRunning = true; }
+    setStatus('running', 'Memproses...');
+    appendOutput(outputEl, '▶️ Menjalankan: ' + action);
+    try {
+        const data = await fetchAPI(action, extraParams);
+        if (data.success) {
+            setStatus('done', 'Selesai');
+            appendOutput(outputEl, '✅ ' + data.message);
+            if (data.log) appendOutput(outputEl, '📋 ' + data.log);
+            return data;
+        } else {
+            setStatus('error', 'Error');
+            appendOutput(outputEl, '❌ ' + data.message);
+            alert('❌ ' + data.message);
+        }
+    } catch (err) {
+        setStatus('error', 'Error');
+        appendOutput(outputEl, '❌ Error: ' + err.message);
+        alert('Error: ' + err.message);
+    } finally {
+        if (btn) { btn.disabled = false; isRunning = false; }
+        setTimeout(() => setStatus('idle', 'Idle'), 3000);
+    }
+}
+
+// ============================================================
+// EVENT: MONTH CHANGE
+// ============================================================
+monthSelect.addEventListener('change', function() { loadVillages(this.value); });
+villageSelect.addEventListener('change', updatePath);
+document.getElementById('refreshFilterBtn').addEventListener('click', function() {
+    loadMonths();
+    villageSelect.innerHTML = '<option value="">-- Pilih Desa --</option>';
+    villageSelect.disabled = true;
+    updatePath();
+});
+
+// ============================================================
+// PROSES DESA (SATU)
+// ============================================================
+document.getElementById('btnProcessDesa').addEventListener('click', function() {
+    const path = villageSelect.value;
+    if (!path) { alert('Pilih Bulan → Desa dulu.'); return; }
+    const loading = document.getElementById('desaLoading');
+    const btn = this;
+    btn.disabled = true;
+    const cm = monthSelect.value, cv = villageSelect.value;
+    loading.textContent = '⏳ Memproses ' + path + '...';
+    callServerAction('processSpecific', 'btnProcessDesa', { folder: path }, document.getElementById('desaOutput'))
+        .finally(() => { loading.textContent = '✅ Selesai!'; btn.disabled = false;
+            setTimeout(() => { loadMonths(); monthSelect.value = cm; monthSelect.dispatchEvent(new Event('change'));
+                setTimeout(() => { villageSelect.value = cv; updatePath(); }, 500); }, 300); });
+});
+
+// ============================================================
+// PROSES SEMUA DESA (BARU!)
+// ============================================================
+document.getElementById('btnProcessAllDesa').addEventListener('click', function() {
+    const month = monthSelect.value;
+    if (!month) { alert('Pilih bulan dulu.'); return; }
+    const loading = document.getElementById('desaLoading');
+    const btn = this;
+    btn.disabled = true;
+    const cm = monthSelect.value, cv = villageSelect.value;
+    loading.textContent = '⏳ Memproses semua desa di ' + month + '...';
+    callServerAction('processAllVillages', 'btnProcessAllDesa', { month }, document.getElementById('desaOutput'))
+        .finally(() => { loading.textContent = '✅ Semua desa selesai!'; btn.disabled = false;
+            setTimeout(() => { loadMonths(); monthSelect.value = cm; monthSelect.dispatchEvent(new Event('change'));
+                setTimeout(() => { villageSelect.value = cv; updatePath(); }, 500); }, 300); });
+});
+
+// ============================================================
+// SERVER BUTTONS
+// ============================================================
+const actions = {
+    'btnProcess': 'process',
+    'btnTrigger': 'trigger',
+    'btnDeleteTriggers': 'deleteTriggers',
+    'btnTest': 'test',
+    'btnRestore': 'restore',
+    'btnDeleteInfo': 'deleteInfo'
+};
+Object.entries(actions).forEach(([id, action]) => {
+    document.getElementById(id).addEventListener('click', () => callServerAction(action, id));
+});
+document.getElementById('btnClearServer').addEventListener('click', function() {
+    document.getElementById('serverOutput').textContent = 'Output dibersihkan.';
+});
+
+// ============================================================
+// MANUAL GABUNG
+// ============================================================
+const dropZone = document.getElementById('dropZone');
+const fileListDiv = document.getElementById('fileList');
+
+function renderFiles() {
+    if (!selectedFiles.length) { fileListDiv.innerHTML = 'Belum ada file.'; return; }
+    fileListDiv.innerHTML = selectedFiles.map((f, i) => 
+        `<div class="file-item"><span>${f.name} (${(f.size/1024).toFixed(1)} KB)</span>
+        <span class="remove" data-idx="${i}">✖</span></div>`
+    ).join('');
+    document.querySelectorAll('.file-item .remove').forEach(el => {
+        el.addEventListener('click', function() { selectedFiles.splice(parseInt(this.dataset.idx), 1); renderFiles(); });
+    });
+}
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', async e => {
+    e.preventDefault(); dropZone.classList.remove('dragover');
+    const items = e.dataTransfer.items;
+    const files = [], zipFiles = [];
+    const processEntry = async (entry) => {
+        if (entry.isFile) {
+            const file = await new Promise(r => entry.file(r));
+            const name = file.name.toLowerCase();
+            if (name.endsWith('.txt')) files.push(file);
+            else if (name.endsWith('.zip')) zipFiles.push(file);
+        } else if (entry.isDirectory) {
+            const reader = entry.createReader();
+            const entries = await new Promise(r => reader.readEntries(r));
+            for (const ent of entries) await processEntry(ent);
+        }
+    };
+    for (let i = 0; i < items.length; i++) {
+        const entry = items[i].webkitGetAsEntry ? items[i].webkitGetAsEntry() : null;
+        if (entry) await processEntry(entry);
+    }
+    let txtFromZips = [];
+    if (zipFiles.length) {
+        document.getElementById('manualOutput').textContent = '⏳ Ekstrak ' + zipFiles.length + ' ZIP...';
+        for (const zf of zipFiles) {
+            try {
+                const zip = await JSZip.loadAsync(await zf.arrayBuffer());
+                const promises = [];
+                zip.forEach((relPath, entry) => {
+                    if (!entry.dir && /\.txt$/i.test(relPath)) {
+                        promises.push(entry.async('blob').then(blob => {
+                            txtFromZips.push(new File([blob], relPath.split('/').pop() || relPath, { type: 'text/plain' }));
+                        }));
+                    }
+                });
+                await Promise.all(promises);
+            } catch (err) { /* skip */ }
+        }
+    }
+    const all = files.concat(txtFromZips);
+    if (all.length) { selectedFiles = selectedFiles.concat(all); renderFiles(); }
+});
+
+document.getElementById('addFilesBtn').addEventListener('click', function() {
+    const input = document.createElement('input');
+    input.type = 'file'; input.multiple = true; input.accept = '.txt,.zip';
+    input.onchange = async function(e) {
+        const raw = Array.from(e.target.files);
+        const txt = raw.filter(f => f.name.toLowerCase().endsWith('.txt'));
+        const zip = raw.filter(f => f.name.toLowerCase().endsWith('.zip'));
+        let fromZip = [];
+        for (const zf of zip) {
+            try {
+                const z = await JSZip.loadAsync(await zf.arrayBuffer());
+                const p = [];
+                z.forEach((rel, entry) => {
+                    if (!entry.dir && /\.txt$/i.test(rel)) {
+                        p.push(entry.async('blob').then(b => { fromZip.push(new File([b], rel.split('/').pop() || rel)); }));
+                    }
+                });
+                await Promise.all(p);
+            } catch (e) { /* skip */ }
+        }
+        const all = txt.concat(fromZip);
+        if (all.length) { selectedFiles = selectedFiles.concat(all); renderFiles(); }
+    };
+    input.click();
+});
+
+document.getElementById('addFolderBtn').addEventListener('click', function() {
+    const input = document.createElement('input');
+    input.type = 'file'; input.webkitdirectory = true;
+    input.onchange = function(e) {
+        const files = Array.from(e.target.files).filter(f => f.name.toLowerCase().endsWith('.txt'));
+        if (files.length) { selectedFiles = selectedFiles.concat(files); renderFiles(); }
+    };
+    input.click();
+});
+
+document.getElementById('clearFilesBtn').addEventListener('click', function() {
+    selectedFiles = []; renderFiles();
+    document.getElementById('manualOutput').textContent = 'Semua file dihapus.';
+    document.getElementById('statRaw').textContent = 'Baris: 0';
+    document.getElementById('statDup').textContent = 'Duplikat: 0';
+    document.getElementById('statUnique').textContent = 'Unik: 0';
+});
+
+function extractDateFromLine(line) {
+    const patterns = [
+        /(\d{4})-(\d{1,2})-(\d{1,2})/,
+        /(\d{1,2})\/(\d{1,2})\/(\d{4})/,
+        /(\d{1,2})-(\d{1,2})-(\d{4})/,
+        /(\d{1,2})\.(\d{1,2})\.(\d{4})/,
+        /(\d{1,2})\s+(Januari|Februari|Maret|April|Mei|Juni|Juli|Agustus|September|Oktober|November|Desember)\s+(\d{4})/i,
+        /([A-Za-z]+),\s+(\d{1,2})\s+(Januari|Februari|Maret|April|Mei|Juni|Juli|Agustus|September|Oktober|November|Desember)\s+(\d{4})/i
+    ];
+    const bulanMap = { januari:0, februari:1, maret:2, april:3, mei:4, juni:5, juli:6, agustus:7, september:8, oktober:9, november:10, desember:11 };
+    for (const pat of patterns) {
+        const m = line.match(pat);
+        if (!m) continue;
+        if (pat.toString().includes('Januari')) {
+            let hari, bulan, tahun;
+            if (m.length === 5) { hari=parseInt(m[2]); bulan=bulanMap[m[3].toLowerCase()]; tahun=parseInt(m[4]); }
+            else if (m.length === 4) { hari=parseInt(m[1]); bulan=bulanMap[m[2].toLowerCase()]; tahun=parseInt(m[3]); }
+            if (bulan!==undefined && !isNaN(hari) && !isNaN(tahun)) return new Date(tahun, bulan, hari);
+        } else {
+            let y, mo, d;
+            if (m[1].length === 4) { y=parseInt(m[1]); mo=parseInt(m[2])-1; d=parseInt(m[3]); }
+            else if (m[3] && m[3].length === 4) { d=parseInt(m[1]); mo=parseInt(m[2])-1; y=parseInt(m[3]); }
+            else if (m[2] && m[2].length === 4) { d=parseInt(m[3]); mo=parseInt(m[1])-1; y=parseInt(m[2]); }
+            else { d=parseInt(m[1]); mo=parseInt(m[2])-1; y=parseInt(m[3]); }
+            if (!isNaN(y) && !isNaN(mo) && !isNaN(d)) return new Date(y, mo, d);
+        }
+    }
+    return null;
+}
+
+document.getElementById('processManualBtn').addEventListener('click', async function() {
+    if (!selectedFiles.length) { alert('Tidak ada file.'); return; }
+    setStatus('running', 'Memproses...');
+    let allLines = [];
+    for (const file of selectedFiles) {
+        try {
+            const text = await file.text();
+            text.split(/\r?\n/).forEach(line => { const t = line.trim(); if (t) allLines.push(t); });
+        } catch (e) { /* skip */ }
+    }
+    const unique = [], seen = new Set();
+    for (const line of allLines) {
+        const key = line.toLowerCase();
+        if (!seen.has(key)) { seen.add(key); unique.push(line); }
+    }
+    const withDate = unique.map(line => ({ line, date: extractDateFromLine(line) }));
+    withDate.sort((a, b) => {
+        if (a.date && b.date) return a.date - b.date;
+        if (a.date) return -1; if (b.date) return 1; return 0;
+    });
+    const sorted = withDate.map(item => item.line);
+    const output = document.getElementById('manualOutput');
+    output.textContent = sorted.join('\n');
+    document.getElementById('statRaw').textContent = 'Baris: ' + allLines.length;
+    document.getElementById('statDup').textContent = 'Duplikat: ' + (allLines.length - unique.length);
+    document.getElementById('statUnique').textContent = 'Unik: ' + sorted.length;
+    if (sorted.length) {
+        const blob = new Blob([sorted.join('\n')], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.download = 'gabungan.txt'; a.href = url;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+        output.textContent += '\n\n✅ File berhasil didownload!';
+    }
+    setStatus('done', 'Selesai');
+    setTimeout(() => setStatus('idle', 'Idle'), 3000);
+});
+
+// ============================================================
+// PWA INSTALL
+// ============================================================
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredPrompt = e; document.getElementById('installBtn').classList.add('show'); });
+document.getElementById('installBtn').addEventListener('click', async () => {
+    if (deferredPrompt) { deferredPrompt.prompt(); const result = await deferredPrompt.userChoice; if (result.outcome === 'accepted') document.getElementById('installBtn').classList.remove('show'); deferredPrompt = null; }
+});
+
+// ============================================================
+// SERVICE WORKER
+// ============================================================
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(regs => Promise.all(regs.map(r => r.unregister())))
+        .then(() => {
+            const sw = new Blob([`
+                const CACHE='txt-combiner-v2';
+                self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(['/'])).then(() => self.skipWaiting())));
+                self.addEventListener('activate', e => e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
+                self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request))));
+            `], { type: 'application/javascript' });
+            navigator.serviceWorker.register(URL.createObjectURL(sw));
+        });
+}
+
+// ============================================================
+// INIT
+// ============================================================
+setStatus('idle', 'Idle');
+loadMonths();
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</body>
+</html>
