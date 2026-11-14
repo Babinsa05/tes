@@ -88,4 +88,4 @@ self.addEventListener('message', (event) => {
 });
 
 console.log(`[SW] CanvasPRO ${VERSION} loaded`);
-console.log('[SW] Developer: Koramil Sukasada');
+console.log('[SW] Developer: Serka I Nyoman Arta');
