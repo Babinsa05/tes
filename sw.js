@@ -56,8 +56,8 @@ self.addEventListener('fetch', event => {
 <script>
 (function(){
   var text='Modern dalam Teknologi, Loyal dalam Pengabdian.';
-  var headerX=80,headerY=80,headerW=2240,headerH=300,canvasW=2400,canvasH=2000,duration=15000;
-  var started=performance.now(),ticker,canvas,wrapper;
+  var headerX=80,headerY=80,headerW=2240,headerH=300,canvasW=2400,canvasH=2000;
+  var ticker,canvas,wrapper;
   function placeTicker(){
     canvas=document.getElementById('mainCanvas');
     wrapper=document.getElementById('canvasWrapper');
@@ -70,35 +70,6 @@ self.addEventListener('fetch', event => {
     ticker.style.width=(headerW*sx)+'px';
     ticker.style.fontSize=(56*sy)+'px';
   }
-  function drawTicker(target){
-    var ctx=target.getContext('2d');
-    if(!ctx)return;
-    var scale=target.width/canvasW;
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(headerX*scale,headerY*scale,headerW*scale,headerH*scale);
-    ctx.clip();
-    ctx.font='800 '+(56*scale)+'px Segoe UI, Arial, sans-serif';
-    ctx.textAlign='left';ctx.textBaseline='middle';
-    var width=ctx.measureText(text).width;
-    var progress=((performance.now()-started)%duration)/duration;
-    var x=(headerX+headerW-progress*(headerW+width))*scale;
-    var y=(headerY+headerH/2)*scale;
-    ctx.shadowColor='transparent';
-    ctx.fillStyle='rgba(0,0,0,.28)';
-    ctx.fillText(text,x+2*scale,y+3*scale);
-    ctx.fillStyle='rgba(0,0,0,.48)';
-    ctx.fillText(text,x+1*scale,y+1.5*scale);
-    ctx.fillStyle='#fff';
-    ctx.shadowColor='rgba(0,0,0,.42)';ctx.shadowBlur=5*scale;ctx.shadowOffsetX=0;ctx.shadowOffsetY=2*scale;
-    ctx.fillText(text,x,y);
-    ctx.restore();
-  }
-  var originalToDataURL=HTMLCanvasElement.prototype.toDataURL;
-  HTMLCanvasElement.prototype.toDataURL=function(){
-    if(this!==canvas&&this.width===canvasW&&this.height===canvasH)drawTicker(this);
-    return originalToDataURL.apply(this,arguments);
-  };
   placeTicker();
   window.addEventListener('resize',placeTicker);
   window.addEventListener('scroll',placeTicker,{passive:true});
