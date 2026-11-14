@@ -49,7 +49,8 @@
         }
         .controls { display: flex; flex-wrap: wrap; gap: 10px; margin: 12px 0 8px 0; justify-content: center; align-items: flex-end; }
         .btn-group { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin: 12px 0 8px 0; padding: 0 15px; }
-        .btn { padding: 10px 24px; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; color: #ffffff; display: inline-flex; align-items: center; gap: 8px; transition: transform 0.1s ease, color 0.1s ease; }
+        .btn { padding: 10px 24px; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; color: #ffffff; display: inline-flex; align-items: center; gap: 8px; transition: transform 0.1s ease, color 0.2s ease; }
+        .btn:hover { transform: translateY(-1px); }
         .btn:active { transform: scale(0.97); color: #b8860b; }
         .btn-download { background: #176b32; }
         .btn-install { background: #176b32; padding: 10px 24px; }
@@ -390,10 +391,16 @@
                 ctx.imageSmoothingEnabled = true;
                 ctx.imageSmoothingQuality = 'high';
                 ctx.drawImage(imgHeader, headerX, headerY, headerW, headerHeight);
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = lineWidth;
+                ctx.strokeRect(headerX + (lineWidth / 2), headerY + (lineWidth / 2), headerW - lineWidth, headerHeight - lineWidth);
                 ctx.restore();
             } else {
                 ctx.fillStyle = '#f0f0f0';
                 ctx.fillRect(headerX, headerY, headerW, headerHeight);
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = lineWidth;
+                ctx.strokeRect(headerX + (lineWidth / 2), headerY + (lineWidth / 2), headerW - lineWidth, headerHeight - lineWidth);
                 ctx.strokeStyle = '#cccccc';
                 ctx.lineWidth = 2;
                 ctx.setLineDash([10, 8]);
