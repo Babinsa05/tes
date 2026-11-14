@@ -44,14 +44,14 @@ self.addEventListener('fetch', event => {
           const addition = `
 <style>
   #header-running-ticker{position:absolute;z-index:5;overflow:hidden;pointer-events:none;white-space:nowrap;transform:translateY(-50%);}
-  #header-running-ticker span{display:inline-block;white-space:nowrap;color:#fff;font-weight:700;text-shadow:0 2px 5px rgba(0,0,0,.8),0 0 2px rgba(0,0,0,.9);animation:header-ticker-scroll 22s linear infinite;}
+  #header-running-ticker span{display:inline-block;white-space:nowrap;color:#fff;font-weight:700;text-shadow:0 2px 5px rgba(0,0,0,.8),0 0 2px rgba(0,0,0,.9);animation:header-ticker-scroll 19s linear infinite;}
   @keyframes header-ticker-scroll{from{transform:translateX(100%)}to{transform:translateX(-100%)}}
   @media(prefers-reduced-motion:reduce){#header-running-ticker span{animation-duration:60s}}
 </style>
 <script>
 (function(){
   var text='Modern dalam Teknologi, Loyal dalam Pengabdian.';
-  var headerX=80,headerY=80,headerW=2240,headerH=300,canvasW=2400,canvasH=2000,duration=22000;
+  var headerX=80,headerY=80,headerW=2240,headerH=300,canvasW=2400,canvasH=2000,duration=19000;
   var started=performance.now(),ticker,canvas,wrapper;
   function placeTicker(){
     canvas=document.getElementById('mainCanvas');
