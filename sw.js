@@ -44,14 +44,14 @@ self.addEventListener('fetch', event => {
           const addition = `
 <style>
   #header-running-ticker{position:absolute;z-index:5;overflow:hidden;pointer-events:none;white-space:nowrap;transform:translateY(-50%);}
-  #header-running-ticker span{display:inline-block;white-space:nowrap;color:#fff;font-weight:700;text-shadow:1px 1px 0 rgba(0,0,0,.65),2px 2px 0 rgba(0,0,0,.28),0 3px 6px rgba(0,0,0,.45);animation:header-ticker-scroll 17.5s linear infinite;}
+  #header-running-ticker span{display:inline-block;white-space:nowrap;color:#fff;font-weight:800;text-shadow:1px 1px 0 rgba(0,0,0,.65),2px 2px 0 rgba(0,0,0,.28),0 3px 6px rgba(0,0,0,.45);animation:header-ticker-scroll 15s linear infinite;}
   @keyframes header-ticker-scroll{from{transform:translateX(100%)}to{transform:translateX(-100%)}}
   @media(prefers-reduced-motion:reduce){#header-running-ticker span{animation-duration:60s}}
 </style>
 <script>
 (function(){
   var text='Modern dalam Teknologi, Loyal dalam Pengabdian.';
-  var headerX=80,headerY=80,headerW=2240,headerH=300,canvasW=2400,canvasH=2000,duration=17500;
+  var headerX=80,headerY=80,headerW=2240,headerH=300,canvasW=2400,canvasH=2000,duration=15000;
   var started=performance.now(),ticker,canvas,wrapper;
   function placeTicker(){
     canvas=document.getElementById('mainCanvas');
@@ -73,7 +73,7 @@ self.addEventListener('fetch', event => {
     ctx.beginPath();
     ctx.rect(headerX*scale,headerY*scale,headerW*scale,headerH*scale);
     ctx.clip();
-    ctx.font='700 '+(56*scale)+'px Segoe UI, Arial, sans-serif';
+    ctx.font='800 '+(56*scale)+'px Segoe UI, Arial, sans-serif';
     ctx.textAlign='left';ctx.textBaseline='middle';
     var width=ctx.measureText(text).width;
     var progress=((performance.now()-started)%duration)/duration;
