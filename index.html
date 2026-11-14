@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#FFFFFF" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    
+    <!-- Cache Control untuk development / update cepat -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    
+    <!-- Manifest dengan cache busting -->
+    <link rel="manifest" href="site.webmanifest?v=2.1.1" />
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png" />
+    
+    <title>CanvasPRO 2.1 - Cetak Profesional</title>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; min-height: 100vh; background: #0a0a0a; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { display: flex; justify-content: center; align-items: flex-start; padding: 10px; }
+        .container { background: white; padding: 0; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); max-width: 1100px; width: 100%; }
+        .canvas-wrapper { position: relative; background: #ffffff; border-radius: 10px; overflow: hidden; width: 100%; }
+        canvas { display: block; width: 100%; height: auto; background: #ffffff; }
+        .click-overlay { 
+            position: absolute; 
+            border-radius: 12px; 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            z-index: 10; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+        }
+        .click-overlay:hover { 
+            background: rgba(0,0,0,0.05); 
+        }
+        .click-overlay-label {
+            color: #555;
+            font-size: 16px;
+            font-weight: 700;
+            pointer-events: none;
+            text-align: center;
+        }
+        .controls { display: flex; flex-wrap: wrap; gap: 10px; margin: 12px 0 8px 0; justify-content: center; align-items: flex-end; }
+        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin: 12px 0 8px 0; padding: 0 15px; }
+        .btn { padding: 10px 24px; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; color: #ffffff; display: inline-flex; align-items: center; gap: 8px; transition: transform 0.1s ease, color 0.1s ease; }
+        .btn:active { transform: scale(0.97); color: #b8860b; }
+        .btn-download { background: #176b32; }
+        .btn-install { background: #176b32; padding: 10px 24px; }
+        .btn-install.hidden { display: none !important; }
+        .btn-update { background: #176b32; padding: 10px 24px; }
+        .btn-update.hidden { display: none !important; }
+        #multiInput { display: none; }
+
+        .download-toast {
+            position: fixed;
+            left: 50%;
+            top: 22px;
+            transform: translate(-50%, -20px);
+            background: rgba(17, 94, 46, 0.96);
+            color: #ffffff;
+            border-radius: 14px;
+            box-shadow: 0 14px 30px rgba(0,0,0,0.25);
+            padding: 14px 20px;
+            min-width: min(90vw, 290px);
+            max-width: 420px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease, transform 0.25s ease;
+            z-index: 1000;
+        }
+        .download-toast.show {
+            opacity: 1;
+            transform: translate(-50%, 0);
+        }
+
+        @media (max-width: 600px) {
+            body { padding: 5px; }
+            .container { padding: 10px; border-radius: 8px; }
+            .controls { flex-direction: column; align-items: stretch; }
+            .btn-group { flex-direction: column; }
+            .btn { width: 100%; justify-content: center; padding: 12px 20px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="canvas-wrapper" id="canvasWrapper">
+        <canvas id="mainCanvas" width="2400" height="2000"></canvas>
+    </div>
+
+    <input type="file" id="multiInput" accept="image/*" multiple />
+
+    <div class="btn-group" id="btnGroup">
+        <button class="btn btn-download" id="downloadBtn"><span aria-hidden="true">⬇</span> DOWNLOAD</button>
+        <button class="btn btn-install" id="installBtn">📲 Install Aplikasi</button>
+        <button class="btn btn-update hidden" id="updateBtn">🔄 Update Aplikasi</button>
+    </div>
+    
+</div>
+
+<div id="downloadToast" class="download-toast" aria-live="polite">Download berhasil!</div>
+
+<script>
+    (function() {
+        'use strict';
+
+        // ============================================
+        //  CANVAS SETUP
+        // ============================================
+        const canvas = document.getElementById('mainCanvas');
+        const ctx = canvas.getContext('2d');
+        const canvasWrapper = document.getElementById('canvasWrapper');
+
+        // Dimensi diubah agar lebih tinggi (tidak terlalu lebar)
+        const W = 2400;
+        const H = 2000; 
+        canvas.width = W;
+        canvas.height = H;
+
+        const border = 80; // Diperbesar agar ada ruang atas bawah
+        const gap = 40;
+        const imgWidth = (W - (border * 2) - gap) / 2;
+        const imgHeight = 720; // Ditinggikan agar proporsional
+        const imgX = border;
+        const imgX2 = imgX + imgWidth + gap;
+        
+        const headerHeight = 300;
+        const headerY = border;
+        const headerX = border;
+        const headerW = (2 * imgWidth) + gap;
+        const headerGap = 60;
+        
+        const imgY = headerY + headerHeight + headerGap;
+        const imgY2 = imgY + imgHeight + gap; // baris ke-2
+
+        const cornerRadius = 12;
+        const lineWidth = 8;
+
+        let imgHeader = null;
+        let imgLeft = null;    // baris 1 kiri
+        let imgRight = null;   // baris 1 kanan
+        let imgLeft2 = null;   // baris 2 kiri
+        let imgRight2 = null;  // baris 2 kanan
+        let isRendering = false;
+        let contextTarget = 'left';
+
+        const multiInput = document.getElementById('multiInput');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const installBtn = document.getElementById('installBtn');
+        const updateBtn = document.getElementById('updateBtn');
+        let overlays = {};
+        let deferredPrompt = null;
+
+        async function loadPastedImage(file) {
+            try {
+                console.log('📷 Memuat gambar untuk area:', contextTarget);
+                const img = await loadImageFromFile(file);
+                const target = contextTarget || 'left';
+                
+                if (target === 'left')          imgLeft = img;
+                else if (target === 'right')    imgRight = img;
+                else if (target === 'left2')    imgLeft2 = img;
+                else if (target === 'right2')   imgRight2 = img;
+                
+                console.log('✅ Gambar ' + target + ' berhasil di-paste');
+                renderCanvas();
+            } catch (err) {
+                console.error('❌ Error paste:', err);
+            }
+        }
+
+        // ============================================
+        //  EVENT PASTE CTRL+V
+        // ============================================
+        document.addEventListener('paste', function(e) {
+            const target = e.target;
+            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+                return;
+            }
+            
+            const items = e.clipboardData && e.clipboardData.items;
+            if (!items) return;
+
+            let imageFile = null;
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i];
+                if (item.type.startsWith('image/')) {
+                    imageFile = item.getAsFile();
+                    break;
+                }
+            }
+
+            if (imageFile) {
+                e.preventDefault();
+                console.log('📷 Ctrl+V: Gambar terdeteksi, target:', contextTarget);
+                loadPastedImage(imageFile);
+            }
+        });
+
+        // ============================================
+        //  CREATE CLICK OVERLAYS (4 slot)
+        // ============================================
+        function createOverlays() {
+            Object.values(overlays).forEach(o => o && o.remove());
+            overlays = {};
+
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+
+            const slots = [
+                { target: 'left',   x: imgX,  y: imgY,  w: imgWidth, h: imgHeight },
+                { target: 'right',  x: imgX2, y: imgY,  w: imgWidth, h: imgHeight },
+                { target: 'left2',  x: imgX,  y: imgY2, w: imgWidth, h: imgHeight },
+                { target: 'right2', x: imgX2, y: imgY2, w: imgWidth, h: imgHeight }
+            ];
+
+            slots.forEach(s => {
+                const overlay = document.createElement('div');
+                overlay.className = 'click-overlay';
+                overlay.style.left = (s.x / scaleX) + 'px';
+                overlay.style.top = (s.y / scaleY) + 'px';
+                overlay.style.width = (s.w / scaleX) + 'px';
+                overlay.style.height = (s.h / scaleY) + 'px';
+                overlay.style.borderRadius = (cornerRadius / scaleX) + 'px';
+
+                const label = document.createElement('span');
+                label.className = 'click-overlay-label';
+                label.textContent = 'KLIK DISINI';
+                overlay.appendChild(label);
+
+                overlay.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    label.style.display = 'none';
+                    contextTarget = s.target;
+                    multiInput.dataset.target = s.target;
+                    multiInput.click();
+                    console.log('🖱️ Click ' + s.target);
+                });
+
+                overlay.addEventListener('mouseenter', () => {
+                    contextTarget = s.target;
+                });
+
+                overlay._label = label;
+                overlay._slot = s;
+
+                canvasWrapper.appendChild(overlay);
+                overlays[s.target] = overlay;
+            });
+        }
+
+        function updateOverlays() {
+            if (Object.keys(overlays).length === 0) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+
+            const imageMap = {
+                left: imgLeft,
+                right: imgRight,
+                left2: imgLeft2,
+                right2: imgRight2
+            };
+
+            Object.keys(overlays).forEach(target => {
+                const overlay = overlays[target];
+                const s = overlay._slot;
+
+                overlay.style.left = (s.x / scaleX) + 'px';
+                overlay.style.top = (s.y / scaleY) + 'px';
+                overlay.style.width = (s.w / scaleX) + 'px';
+                overlay.style.height = (s.h / scaleY) + 'px';
+                overlay.style.borderRadius = (cornerRadius / scaleX) + 'px';
+
+                overlay._label.style.display = imageMap[target] ? 'none' : 'block';
+            });
+        }
+
+        // ============================================
+        //  LOAD HEADER
+        // ============================================
+        async function loadHeader() {
+            try {
+                console.log('🔍 Mencari header di folder header/ ...');
+                const possibleFiles = ['header.png', 'header-1.png', 'header.jpg'];
+                for (const file of possibleFiles) {
+                    try {
+                        const imgResponse = await fetch(`./header/${file}`);
+                        if (imgResponse.ok) {
+                            const blob = await imgResponse.blob();
+                            const url = URL.createObjectURL(blob);
+                            const img = new Image();
+                            img.onload = () => {
+                                console.log(`✅ Header berhasil dimuat: ${file}`);
+                                imgHeader = img;
+                                renderCanvas();
+                            };
+                            img.onerror = () => {};
+                            img.src = url;
+                            return;
+                        }
+                    } catch (e) { /* skip */ }
+                }
+                console.warn('⚠️ Tidak ada header di folder header/');
+                renderCanvas();
+            } catch (error) {
+                console.error('❌ Error loading header:', error);
+                renderCanvas();
+            }
+        }
+
+        function drawImageAdaptive(ctx, img, dx, dy, dw, dh) {
+            ctx.save();
+            roundRect(ctx, dx, dy, dw, dh, cornerRadius);
+            ctx.clip();
+
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(dx, dy, dw, dh);
+            const scale = Math.max(dw / img.width, dh / img.height);
+            const drawWidth = img.width * scale;
+            const drawHeight = img.height * scale;
+            const drawX = dx + (dw - drawWidth) / 2;
+            const drawY = dy + (dh - drawHeight) / 2;
+            ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+            ctx.restore();
+        }
+
+        function roundRect(ctx, x, y, w, h, r) {
+            ctx.beginPath();
+            if (ctx.roundRect) {
+                ctx.roundRect(x, y, w, h, r);
+            } else {
+                ctx.moveTo(x + r, y);
+                ctx.lineTo(x + w - r, y);
+                ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+                ctx.lineTo(x + w, y + h - r);
+                ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+                ctx.lineTo(x + r, y + h);
+                ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+                ctx.lineTo(x, y + r);
+                ctx.quadraticCurveTo(x, y, x + r, y);
+                ctx.closePath();
+            }
+        }
+
+        function loadImageFromFile(file) {
+            return new Promise((resolve, reject) => {
+                if (!file) return resolve(null);
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => resolve(img);
+                    img.onerror = () => reject('Gagal decode gambar');
+                    img.src = e.target.result;
+                };
+                reader.onerror = () => reject('Gagal baca file');
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // ============================================
+        //  RENDER CANVAS (4 slot)
+        // ============================================
+        function renderCanvas() {
+            if (isRendering) return;
+            isRendering = true;
+
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, W, H);
+
+            // Header
+            if (imgHeader) {
+                ctx.save();
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                ctx.drawImage(imgHeader, headerX, headerY, headerW, headerHeight);
+                ctx.restore();
+            } else {
+                ctx.fillStyle = '#f0f0f0';
+                ctx.fillRect(headerX, headerY, headerW, headerHeight);
+                ctx.strokeStyle = '#cccccc';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([10, 8]);
+                ctx.strokeRect(headerX, headerY, headerW, headerHeight);
+                ctx.setLineDash([]);
+                ctx.fillStyle = '#999999';
+                ctx.font = '32px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('📁 Taruh file PNG di folder header/', headerX + headerW / 2, headerY + headerHeight / 2);
+            }
+
+            // 4 slot gambar
+            const slots = [
+                { img: imgLeft,   x: imgX,  y: imgY  },
+                { img: imgRight,  x: imgX2, y: imgY  },
+                { img: imgLeft2,  x: imgX,  y: imgY2 },
+                { img: imgRight2, x: imgX2, y: imgY2 }
+            ];
+
+            slots.forEach(s => {
+                if (s.img) {
+                    drawImageAdaptive(ctx, s.img, s.x, s.y, imgWidth, imgHeight);
+
+                    ctx.strokeStyle = '#000000';
+                    ctx.lineWidth = lineWidth;
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+                    const strokeOffset = lineWidth / 2;
+                    roundRect(ctx, s.x + strokeOffset, s.y + strokeOffset, imgWidth - lineWidth, imgHeight - lineWidth, cornerRadius);
+                    ctx.stroke();
+                } else {
+                    ctx.save();
+                    roundRect(ctx, s.x, s.y, imgWidth, imgHeight, cornerRadius);
+                    ctx.clip();
+                    ctx.fillStyle = '#d9d9d9';
+                    ctx.fillRect(s.x, s.y, imgWidth, imgHeight);
+                    ctx.restore();
+                }
+            });
+
+            isRendering = false;
+            setTimeout(updateOverlays, 50);
+        }
+
+        // ============================================
+        //  DOWNLOAD PNG
+        // ============================================
+        const downloadToast = document.getElementById('downloadToast');
+
+        function showDownloadToast(message) {
+            if (!downloadToast) return;
+            downloadToast.textContent = message;
+            downloadToast.classList.add('show');
+            clearTimeout(downloadToast.hideTimer);
+            downloadToast.hideTimer = setTimeout(() => {
+                downloadToast.classList.remove('show');
+            }, 2200);
+        }
+
+        function downloadPNG() {
+            if (!imgLeft && !imgRight && !imgLeft2 && !imgRight2) {
+                showDownloadToast('Tambahkan gambar sebelum download.');
+                return;
+            }
+
+            try {
+                const scaleFactor = 1;
+                const newWidth = Math.floor(canvas.width * scaleFactor);
+                const newHeight = Math.floor(canvas.height * scaleFactor);
+                
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = newWidth;
+                tempCanvas.height = newHeight;
+                const tempCtx = tempCanvas.getContext('2d');
+                if (!tempCtx) {
+                    throw new Error('Tidak dapat menyiapkan gambar untuk download.');
+                }
+                
+                tempCtx.imageSmoothingEnabled = true;
+                tempCtx.imageSmoothingQuality = 'high';
+                tempCtx.drawImage(canvas, 0, 0, newWidth, newHeight);
+
+                const imageData = tempCanvas.toDataURL('image/png');
+                const downloadCounter = parseInt(localStorage.getItem('lapsitDownloadCounter') || '0', 10) + 1;
+                
+                const link = document.createElement('a');
+                link.download = `lapsit_${downloadCounter}.png`;
+                link.href = imageData;
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                localStorage.setItem('lapsitDownloadCounter', downloadCounter.toString());
+                clearImages();
+                showDownloadToast('Download berhasil! Gambar sudah direset.');
+            } catch (e) {
+                console.error('❌ Gagal download:', e);
+                showDownloadToast('Download gagal. Silakan coba lagi.');
+            }
+        }
+
+        function clearImages() {
+            imgLeft = null;
+            imgRight = null;
+            imgLeft2 = null;
+            imgRight2 = null;
+            multiInput.value = '';
+            renderCanvas();
+        }
+
+        // ============================================
+        //  HYBRID MULTI-SELECT HANDLER
+        // ============================================
+        multiInput.addEventListener('change', async (e) => {
+            const files = e.target.files;
+            const target = multiInput.dataset.target || 'left';
+            
+            if (files && files.length > 0) {
+                try {
+                    if (files.length === 1) {
+                        const img = await loadImageFromFile(files[0]);
+                        if (target === 'left')         imgLeft = img;
+                        else if (target === 'right')   imgRight = img;
+                        else if (target === 'left2')   imgLeft2 = img;
+                        else if (target === 'right2')  imgRight2 = img;
+                    } else {
+                        // 2+ file: isi satu baris sesuai target
+                        const file1 = files[0] || null;
+                        const file2 = files[1] || null;
+                        const isRow1 = (target === 'left' || target === 'right');
+                        
+                        if (isRow1) {
+                            if (file1) imgLeft = await loadImageFromFile(file1);
+                            if (file2) imgRight = await loadImageFromFile(file2);
+                        } else {
+                            if (file1) imgLeft2 = await loadImageFromFile(file1);
+                            if (file2) imgRight2 = await loadImageFromFile(file2);
+                        }
+                    }
+                    
+                    renderCanvas();
+                    
+                } catch (err) {
+                    console.error('❌ Gagal load gambar:', err);
+                }
+            }
+            multiInput.value = '';
+            multiInput.dataset.target = 'left';
+        });
+        downloadBtn.addEventListener('click', downloadPNG);
+
+        // ============================================
+        //  PWA INSTALL LOGIC
+        // ============================================
+        function isAppInstalled() {
+            if (window.matchMedia('(display-mode: standalone)').matches) return true;
+            if (window.navigator.standalone === true) return true;
+            if (localStorage.getItem('app_installed') === 'true') return true;
+            return false;
+        }
+
+        function hideInstallButton() {
+            installBtn.classList.add('hidden');
+        }
+
+        function showInstallButton() {
+            installBtn.classList.remove('hidden');
+        }
+
+        (function checkInstallStatus() {
+            if (isAppInstalled()) {
+                hideInstallButton();
+            } else {
+                installBtn.classList.add('hidden');
+            }
+        })();
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            if (!isAppInstalled()) {
+                showInstallButton();
+            } else {
+                hideInstallButton();
+            }
+        });
+
+        window.addEventListener('appinstalled', () => {
+            localStorage.setItem('app_installed', 'true');
+            hideInstallButton();
+            deferredPrompt = null;
+        });
+
+        installBtn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const result = await deferredPrompt.userChoice;
+                if (result.outcome === 'accepted') {
+                    // handled by appinstalled
+                } else {
+                    if (!isAppInstalled()) {
+                        showInstallButton();
+                    }
+                }
+                deferredPrompt = null;
+            } else {
+            }
+        });
+
+        // ============================================
+        //  SERVICE WORKER & UPDATE
+        // ============================================
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js?v=2.1.1', {
+                scope: '/',
+                updateViaCache: 'none'
+            }).then((registration) => {
+                console.log('✅ Service Worker registered');
+
+                setInterval(() => {
+                    registration.update();
+                }, 15000);
+
+                registration.addEventListener('updatefound', () => {
+                    const newWorker = registration.installing;
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            newWorker.postMessage({ type: 'SKIP_WAITING' });
+                            window.location.reload();
+                        }
+                    });
+                });
+
+                if (registration.active) {
+                    registration.active.postMessage({ type: 'SKIP_WAITING' });
+                }
+            }).catch((err) => {
+                console.log('❌ Service Worker failed:', err);
+            });
+        }
+
+        window.addEventListener('load', () => {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistration().then(reg => {
+                    if (reg) reg.update();
+                });
+            }
+        });
+
+        updateBtn.addEventListener('click', () => window.location.reload());
+
+        // ============================================
+        //  RESIZE
+        // ============================================
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(updateOverlays, 200);
+        });
+
+        // ============================================
+        //  INIT
+        // ============================================
+        if (!CanvasRenderingContext2D.prototype.roundRect) {
+            CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+                if (r > w / 2) r = w / 2;
+                if (r > h / 2) r = h / 2;
+                this.moveTo(x + r, y);
+                this.arcTo(x + w, y, x + w, y + h, r);
+                this.arcTo(x + w, y + h, x, y + h, r);
+                this.arcTo(x, y + h, x, y, r);
+                this.arcTo(x, y, x + w, y, r);
+                return this;
+            };
+        }
+
+        async function init() {
+            await loadHeader();
+            renderCanvas();
+            setTimeout(() => {
+                createOverlays();
+                updateOverlays();
+            }, 100);
+            
+            if (isAppInstalled()) {
+                hideInstallButton();
+            }
+            
+            console.log('✅ CanvasPRO 2.1 - 4 Slot siap!');
+            console.log('📸 Download: Format PNG sesuai ukuran kanvas');
+        }
+
+        init();
+    })();
+</script>
+
+</body>
+</html>
