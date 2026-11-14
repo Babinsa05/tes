@@ -40,9 +40,14 @@ self.addEventListener('fetch', event => {
         const contentType = response.headers.get('content-type') || '';
 
         if (isPage && contentType.includes('text/html')) {
-          const html = await response.clone().text();
+          let html = await response.clone().text();
+          const footer = '<div id="developer-footer" class="developer-footer">Developer: Serka I Nyoman Arta</div>';
+          if (!html.includes('id="developer-footer"')) {
+            html = html.replace(/(<div class="btn-group" id="btnGroup">[\s\S]*?<\/div>)/, `$1\n        ${footer}`);
+          }
           const addition = `
 <style>
+  .developer-footer{width:100%;margin:2px auto 10px;text-align:center;color:#176b32;font-size:12px;line-height:1.5;font-weight:600;}
   #header-running-ticker{position:absolute;z-index:5;overflow:hidden;pointer-events:none;white-space:nowrap;transform:translateY(-50%);}
   #header-running-ticker span{display:inline-block;white-space:nowrap;color:#fff;font-weight:800;text-shadow:1px 1px 0 rgba(0,0,0,.65),2px 2px 0 rgba(0,0,0,.28),0 3px 6px rgba(0,0,0,.45);animation:header-ticker-scroll 15s linear infinite;}
   @keyframes header-ticker-scroll{from{transform:translateX(100%)}to{transform:translateX(-100%)}}
@@ -79,7 +84,6 @@ self.addEventListener('fetch', event => {
     var progress=((performance.now()-started)%duration)/duration;
     var x=(headerX+headerW-progress*(headerW+width))*scale;
     var y=(headerY+headerH/2)*scale;
-    // Lapisan tipis untuk efek 3D, lalu teks utama dan bayangan lembut.
     ctx.shadowColor='transparent';
     ctx.fillStyle='rgba(0,0,0,.28)';
     ctx.fillText(text,x+2*scale,y+3*scale);
@@ -104,7 +108,7 @@ self.addEventListener('fetch', event => {
           const updatedHTML = html.includes('</body>')
             ? html.replace('</body>', addition + '\n</body>')
             : html + addition;
-          if (updatedHTML !== html) {
+          if (updatedHTML !== (await response.clone().text())) {
             const headers = new Headers(response.headers);
             headers.delete('content-length');
             responseToCache = new Response(updatedHTML, { status: response.status, statusText: response.statusText, headers });
