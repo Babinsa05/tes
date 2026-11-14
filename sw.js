@@ -1,4 +1,4 @@
-const VERSION = '2.1.1';
+const VERSION = '2.1.2';
 const CACHE_NAME = `canvaspro-${VERSION}-${Date.now()}`;
 
 const ASSETS = [
@@ -66,7 +66,7 @@ self.addEventListener('fetch', event => {
     var sx=cr.width/canvasW,sy=cr.height/canvasH;
     if(!ticker){ticker=document.createElement('div');ticker.id='header-running-ticker';ticker.setAttribute('aria-label',text);ticker.innerHTML='<span></span>';wrapper.appendChild(ticker);ticker.firstChild.textContent=text;}
     ticker.style.left=(cr.left-wr.left+headerX*sx)+'px';
-    ticker.style.top=(cr.top-wr.top+(headerY+headerH/2)*sy)+'px';
+    ticker.style.top=(cr.top-wr.top+(headerY+headerH-40)*sy)+'px';
     ticker.style.width=(headerW*sx)+'px';
     ticker.style.fontSize=(56*sy)+'px';
   }
