@@ -5,7 +5,7 @@ const ASSETS = [
   './',
   './index.html',
   './site.webmanifest',
-  './manifest.json',  // opsional jika ada
+  './manifest.json',
   './icons/favicon-16x16.png',
   './icons/favicon-32x32.png',
   './icons/apple-touch-icon.png',
@@ -13,96 +13,113 @@ const ASSETS = [
   './icons/android-chrome-512x512.png'
 ];
 
-self.addEventListener('install', (event) => {
+self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('[SW] Caching assets');
-        return cache.addAll(ASSETS);
-      })
-      .then(() => {
-        console.log('[SW] Install complete, skip waiting');
-        return self.skipWaiting();
-      })
+      .then(cache => cache.addAll(ASSETS))
+      .then(() => self.skipWaiting())
   );
 });
 
-self.addEventListener('activate', (event) => {
+self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.filter(key => key !== CACHE_NAME)
-            .map(key => caches.delete(key))
-      );
-    }).then(() => {
-      console.log('[SW] Activate complete, claim clients');
-      return self.clients.claim();
-    })
+    caches.keys()
+      .then(keys => Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))))
+      .then(() => self.clients.claim())
   );
 });
 
-self.addEventListener('fetch', (event) => {
+self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
-  
-  // Network-first untuk index.html dan manifest
-  if (url.pathname === '/' || url.pathname === '/index.html' || url.pathname === '/site.webmanifest' || url.pathname === '/manifest.json') {
+  const isPage = url.pathname === '/' || url.pathname.endsWith('/index.html');
+
+  if (isPage || url.pathname.endsWith('/site.webmanifest') || url.pathname.endsWith('/manifest.json')) {
     event.respondWith(
-      fetch(event.request)
-        .then(async (response) => {
-          let responseToCache = response.clone();
-          const contentType = response.headers.get('content-type') || '';
+      fetch(event.request).then(async response => {
+        let responseToCache = response.clone();
+        const contentType = response.headers.get('content-type') || '';
 
-          // Tambahkan ticker kecil di bawah tombol-tombol tanpa mengubah skrip halaman.
-          if ((url.pathname === '/' || url.pathname === '/index.html') && contentType.includes('text/html')) {
-            const html = await response.clone().text();
-            const ticker = `\n    <style>\n      .developer-ticker{width:100%;overflow:hidden;margin:4px auto 0;white-space:nowrap;text-align:center;color:#176b32;font-size:11px;line-height:1.4}\n      .developer-ticker span{display:inline-block;padding-left:100%;animation:developerTicker 14s linear infinite}\n      @keyframes developerTicker{to{transform:translateX(-100%)}}\n      @media(prefers-reduced-motion:reduce){.developer-ticker span{animation:none;padding-left:0}}\n    </style>\n    <div class="developer-ticker" aria-label="Pengembang"><span>Pengembang Serka I Nyoman Arta</span></div>`;
-            const updatedHTML = html.replace('</div>\n    \n</div>', `</div>${ticker}\n    \n</div>`);
-            if (updatedHTML !== html) {
-              const headers = new Headers(response.headers);
-              headers.delete('content-length');
-              responseToCache = new Response(updatedHTML, {
-                status: response.status,
-                statusText: response.statusText,
-                headers
-              });
-            }
+        if (isPage && contentType.includes('text/html')) {
+          const html = await response.clone().text();
+          const addition = `
+<style>
+  #header-running-ticker{position:absolute;z-index:5;overflow:hidden;pointer-events:none;white-space:nowrap;transform:translateY(-50%);}
+  #header-running-ticker span{display:inline-block;white-space:nowrap;color:#fff;font-weight:700;text-shadow:0 2px 5px rgba(0,0,0,.8),0 0 2px rgba(0,0,0,.9);animation:header-ticker-scroll 22s linear infinite;}
+  @keyframes header-ticker-scroll{from{transform:translateX(100%)}to{transform:translateX(-100%)}}
+  @media(prefers-reduced-motion:reduce){#header-running-ticker span{animation-duration:60s}}
+</style>
+<script>
+(function(){
+  var text='Modern dalam Teknologi, Loyal dalam Pengabdian.';
+  var headerX=80,headerY=80,headerW=2240,headerH=300,canvasW=2400,canvasH=2000,duration=22000;
+  var started=performance.now(),ticker,canvas,wrapper;
+  function placeTicker(){
+    canvas=document.getElementById('mainCanvas');
+    wrapper=document.getElementById('canvasWrapper');
+    if(!canvas||!wrapper)return;
+    var cr=canvas.getBoundingClientRect(),wr=wrapper.getBoundingClientRect();
+    var sx=cr.width/canvasW,sy=cr.height/canvasH;
+    if(!ticker){ticker=document.createElement('div');ticker.id='header-running-ticker';ticker.setAttribute('aria-label',text);ticker.innerHTML='<span></span>';wrapper.appendChild(ticker);ticker.firstChild.textContent=text;}
+    ticker.style.left=(cr.left-wr.left+headerX*sx)+'px';
+    ticker.style.top=(cr.top-wr.top+(headerY+headerH/2)*sy)+'px';
+    ticker.style.width=(headerW*sx)+'px';
+    ticker.style.fontSize=(56*sy)+'px';
+  }
+  function drawTicker(target){
+    var ctx=target.getContext('2d');
+    if(!ctx)return;
+    var scale=target.width/canvasW;
+    ctx.save();
+    ctx.font='700 '+(56*scale)+'px Segoe UI, Arial, sans-serif';
+    ctx.textAlign='left';ctx.textBaseline='middle';
+    ctx.fillStyle='#fff';ctx.shadowColor='rgba(0,0,0,.8)';ctx.shadowBlur=6*scale;ctx.shadowOffsetX=0;ctx.shadowOffsetY=2*scale;
+    var width=ctx.measureText(text).width;
+    var progress=((performance.now()-started)%duration)/duration;
+    var x=headerX+headerW-progress*(headerW+width);
+    ctx.fillText(text,x,headerY+headerH/2);
+    ctx.restore();
+  }
+  var originalToDataURL=HTMLCanvasElement.prototype.toDataURL;
+  HTMLCanvasElement.prototype.toDataURL=function(){
+    if(this!==canvas&&this.width===canvasW&&this.height===canvasH)drawTicker(this);
+    return originalToDataURL.apply(this,arguments);
+  };
+  placeTicker();
+  window.addEventListener('resize',placeTicker);
+  window.addEventListener('scroll',placeTicker,{passive:true});
+  setTimeout(placeTicker,100);
+})();
+</script>`;
+          const updatedHTML = html.includes('</body>')
+            ? html.replace('</body>', addition + '\n</body>')
+            : html + addition;
+          if (updatedHTML !== html) {
+            const headers = new Headers(response.headers);
+            headers.delete('content-length');
+            responseToCache = new Response(updatedHTML, { status: response.status, statusText: response.statusText, headers });
           }
+        }
 
-          caches.open(CACHE_NAME).then(cache => {
-            cache.put(event.request, responseToCache.clone());
-          });
-          return responseToCache;
-        })
-        .catch(() => {
-          return caches.match(event.request);
-        })
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseToCache.clone()));
+        return responseToCache;
+      }).catch(() => caches.match(event.request))
     );
     return;
   }
 
-  // Static assets: cache-first
   event.respondWith(
-    caches.match(event.request)
-      .then((cached) => {
-        if (cached) return cached;
-        return fetch(event.request).then((response) => {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then(cache => {
-            cache.put(event.request, clone);
-          });
-          return response;
-        });
-      })
-      .catch(() => {
-        // Fallback
-      })
+    caches.match(event.request).then(cached => {
+      if (cached) return cached;
+      return fetch(event.request).then(response => {
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, response.clone()));
+        return response;
+      });
+    }).catch(() => undefined)
   );
 });
 
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 console.log(`[SW] CanvasPRO ${VERSION} loaded`);
