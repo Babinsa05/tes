@@ -48,12 +48,30 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname === '/' || url.pathname === '/index.html' || url.pathname === '/site.webmanifest' || url.pathname === '/manifest.json') {
     event.respondWith(
       fetch(event.request)
-        .then((response) => {
-          const clone = response.clone();
+        .then(async (response) => {
+          let responseToCache = response.clone();
+          const contentType = response.headers.get('content-type') || '';
+
+          // Tambahkan ticker kecil di bawah tombol-tombol tanpa mengubah skrip halaman.
+          if ((url.pathname === '/' || url.pathname === '/index.html') && contentType.includes('text/html')) {
+            const html = await response.clone().text();
+            const ticker = `\n    <style>\n      .developer-ticker{width:100%;overflow:hidden;margin:4px auto 0;white-space:nowrap;text-align:center;color:#176b32;font-size:11px;line-height:1.4}\n      .developer-ticker span{display:inline-block;padding-left:100%;animation:developerTicker 14s linear infinite}\n      @keyframes developerTicker{to{transform:translateX(-100%)}}\n      @media(prefers-reduced-motion:reduce){.developer-ticker span{animation:none;padding-left:0}}\n    </style>\n    <div class="developer-ticker" aria-label="Pengembang"><span>Pengembang Serka I Nyoman Arta</span></div>`;
+            const updatedHTML = html.replace('</div>\n    \n</div>', `</div>${ticker}\n    \n</div>`);
+            if (updatedHTML !== html) {
+              const headers = new Headers(response.headers);
+              headers.delete('content-length');
+              responseToCache = new Response(updatedHTML, {
+                status: response.status,
+                statusText: response.statusText,
+                headers
+              });
+            }
+          }
+
           caches.open(CACHE_NAME).then(cache => {
-            cache.put(event.request, clone);
+            cache.put(event.request, responseToCache.clone());
           });
-          return response;
+          return responseToCache;
         })
         .catch(() => {
           return caches.match(event.request);
@@ -88,4 +106,4 @@ self.addEventListener('message', (event) => {
 });
 
 console.log(`[SW] CanvasPRO ${VERSION} loaded`);
-console.log('[SW] Developer: Serka I Nyoman Arta');
+console.log('[SW] Developer: Koramil Sukasada');
